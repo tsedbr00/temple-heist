@@ -92,16 +92,17 @@ export class Player {
     if (!this.alive) return;
 
     const { dx, dy } = input.consumeMouse();
-    this.yaw -= dx * 0.0022;
-    this.pitch -= dy * 0.002;
+    this.yaw -= dx * 0.0035;
+    this.pitch -= dy * 0.003;
     this.pitch = THREE.MathUtils.clamp(this.pitch, -0.4, 0.55);
 
     const move = input.moveVector();
+    this.hiding = input.isHiding();
     this.sprinting = move.sprint && !this.hiding;
-    const speed = this.hiding ? 1.8 : this.sprinting ? 7.5 : 4.2;
+    const speed = this.hiding ? 2.5 : this.sprinting ? 11 : 6.5;
 
-    const forward = new THREE.Vector3(-Math.sin(this.yaw), 0, -Math.cos(this.yaw));
-    const right = new THREE.Vector3(Math.cos(this.yaw), 0, -Math.sin(this.yaw));
+    const forward = new THREE.Vector3(Math.sin(this.yaw), 0, Math.cos(this.yaw));
+    const right = new THREE.Vector3(-Math.cos(this.yaw), 0, Math.sin(this.yaw));
     const wish = new THREE.Vector3()
       .addScaledVector(right, move.x)
       .addScaledVector(forward, -move.z);
@@ -113,14 +114,12 @@ export class Player {
       if (mag > 0 && mag < 0.99) {
         wish.normalize().multiplyScalar(speed * mag);
       }
-      this.velocity.x = THREE.MathUtils.damp(this.velocity.x, wish.x, 12, dt);
-      this.velocity.z = THREE.MathUtils.damp(this.velocity.z, wish.z, 12, dt);
+      this.velocity.x = THREE.MathUtils.damp(this.velocity.x, wish.x, 18, dt);
+      this.velocity.z = THREE.MathUtils.damp(this.velocity.z, wish.z, 18, dt);
     } else {
-      this.velocity.x = THREE.MathUtils.damp(this.velocity.x, 0, 10, dt);
-      this.velocity.z = THREE.MathUtils.damp(this.velocity.z, 0, 10, dt);
+      this.velocity.x = THREE.MathUtils.damp(this.velocity.x, 0, 14, dt);
+      this.velocity.z = THREE.MathUtils.damp(this.velocity.z, 0, 14, dt);
     }
-
-    this.hiding = input.isHiding();
 
     const next = this.position.clone();
     next.x += this.velocity.x * dt;

@@ -39,8 +39,8 @@ export class CameraController {
 
     const lookAt = player.position.clone().add(new THREE.Vector3(0, 1.4, 0));
     // Look slightly ahead
-    lookAt.x -= Math.sin(yaw) * 1.5;
-    lookAt.z -= Math.cos(yaw) * 1.5;
+    lookAt.x += Math.sin(yaw) * 1.5;
+    lookAt.z += Math.cos(yaw) * 1.5;
     this.camera.lookAt(lookAt);
 
     if (this.shake > 0) {

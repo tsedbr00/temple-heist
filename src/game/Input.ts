@@ -85,8 +85,8 @@ export class Input {
         for (let i = 0; i < e.changedTouches.length; i++) {
           const t = e.changedTouches[i];
           if (t.identifier === this.lookTouchId) {
-            this.mouseDX += (t.clientX - this.lastLookX) * 1.6;
-            this.mouseDY += (t.clientY - this.lastLookY) * 1.6;
+            this.mouseDX += (t.clientX - this.lastLookX) * 2.2;
+            this.mouseDY += (t.clientY - this.lastLookY) * 2.2;
             this.lastLookX = t.clientX;
             this.lastLookY = t.clientY;
           }
@@ -163,8 +163,8 @@ export class Input {
     });
     pad.addEventListener('pointermove', (e) => {
       if (id !== e.pointerId) return;
-      this.mouseDX += (e.clientX - lx) * 1.8;
-      this.mouseDY += (e.clientY - ly) * 1.8;
+      this.mouseDX += (e.clientX - lx) * 2.2;
+      this.mouseDY += (e.clientY - ly) * 2.2;
       lx = e.clientX;
       ly = e.clientY;
     });
