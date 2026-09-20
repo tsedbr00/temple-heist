@@ -32,7 +32,7 @@ Deploy to GitHub Pages (publishes `dist` to the `gh-pages` branch):
 npm run deploy
 ```
 
-Pushing to `main` also triggers the GitHub Actions Pages workflow (`.github/workflows/deploy-pages.yml`). Enable **Settings → Pages → Source: GitHub Actions** (or the `gh-pages` branch) once.
+After the first deploy, set **Settings → Pages → Source** to the `gh-pages` branch (`/` root) if GitHub has not already.
 
 ## Controls
 
