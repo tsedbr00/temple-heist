@@ -1,12 +1,13 @@
 {
   "name": "temple-heist",
   "private": true,
-  "version": "0.0.0",
+  "version": "0.1.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "deploy": "npm run build && npx --yes gh-pages@6 -d dist -b gh-pages"
   },
   "devDependencies": {
     "@types/three": "^0.186.0",

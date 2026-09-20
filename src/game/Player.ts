@@ -18,6 +18,8 @@ export class Player {
   noiseT = 0;
   hiding = false;
   sprinting = false;
+  /** Fired when torch/noise is used (for SFX). */
+  onToolUse?: (tool: ToolId) => void;
   private torchMesh: THREE.Group;
   private flameLight: THREE.PointLight;
   private bodyGroup: THREE.Group;
@@ -81,10 +83,6 @@ export class Player {
     return g;
   }
 
-  get tool(): ToolId {
-    return this.torchActive || this.noiseActive ? (this.torchWaveT > 0 ? 'torch' : 'noise') : 'torch';
-  }
-
   update(
     dt: number,
     input: Input,
@@ -109,7 +107,12 @@ export class Player {
       .addScaledVector(forward, -move.z);
 
     if (wish.lengthSq() > 0) {
-      wish.normalize().multiplyScalar(speed);
+      wish.normalize().multiplyScalar(speed * Math.min(1, Math.hypot(move.x, move.z) || 1));
+      // For analog stick, re-apply magnitude
+      const mag = Math.min(1, Math.hypot(move.x, move.z));
+      if (mag > 0 && mag < 0.99) {
+        wish.normalize().multiplyScalar(speed * mag);
+      }
       this.velocity.x = THREE.MathUtils.damp(this.velocity.x, wish.x, 12, dt);
       this.velocity.z = THREE.MathUtils.damp(this.velocity.z, wish.z, 12, dt);
     } else {
@@ -117,8 +120,7 @@ export class Player {
       this.velocity.z = THREE.MathUtils.damp(this.velocity.z, 0, 10, dt);
     }
 
-    // Crouch / hide with Ctrl
-    this.hiding = input.isDown('ControlLeft') || input.isDown('ControlRight');
+    this.hiding = input.isHiding();
 
     const next = this.position.clone();
     next.x += this.velocity.x * dt;
@@ -131,21 +133,17 @@ export class Player {
     this.group.position.copy(this.position);
     this.group.rotation.y = this.yaw;
 
-    // Tool use
-    if (input.tool === 'torch') {
-      this.torchMesh.visible = true;
-    } else {
-      // noisemaker held — still show torch dimmed or swap visual
-      this.torchMesh.visible = true;
-    }
+    this.torchMesh.visible = true;
 
     if (input.consumeUse()) {
       if (input.tool === 'torch') {
         this.torchWaveT = 0.85;
         this.torchActive = true;
+        this.onToolUse?.('torch');
       } else {
         this.noiseT = 1.2;
         this.noiseActive = true;
+        this.onToolUse?.('noise');
       }
     }
 
@@ -160,7 +158,7 @@ export class Player {
       this.torchActive = false;
       this.torchArm.rotation.z = THREE.MathUtils.damp(this.torchArm.rotation.z, 0.15, 8, dt);
       this.torchArm.rotation.x = THREE.MathUtils.damp(this.torchArm.rotation.x, 0, 8, dt);
-      this.flameLight.intensity = inTightSpace ? 2.2 : 1.4;
+      this.flameLight.intensity = inTightSpace ? 2.4 : 1.5;
       const flame = this.torchMesh.getObjectByName('flame') as THREE.Mesh;
       if (flame) {
         const s = 0.9 + Math.sin(performance.now() * 0.012) * 0.08;
@@ -175,7 +173,6 @@ export class Player {
       this.noiseActive = false;
     }
 
-    // Bob
     const moving = wish.lengthSq() > 0.01;
     if (moving) {
       const bob = Math.sin(performance.now() * 0.012 * (this.sprinting ? 1.5 : 1)) * 0.04;

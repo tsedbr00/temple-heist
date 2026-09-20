@@ -15,14 +15,32 @@ export class Jaguar {
   private fleeTimer = 0;
   private alert = 0;
   private tipShown = false;
+  private chaseTipShown = false;
+  private eyes: THREE.Mesh[] = [];
+  private alertRing: THREE.Mesh;
+  private bodyRoot: THREE.Group;
+  private scareBurst: THREE.Points | null = null;
+  private scareBurstT = 0;
   onTip?: (msg: string) => void;
   onCatch?: () => void;
+  onStateChange?: (state: JaguarState) => void;
 
   constructor(x: number, z: number, patrolRadius = 6) {
     this.patrolCenter = new THREE.Vector3(x, 0, z);
     this.position.set(x, 0, z);
     this.patrolRadius = patrolRadius;
-    this.group.add(this.buildMesh());
+    this.bodyRoot = this.buildMesh();
+    this.group.add(this.bodyRoot);
+
+    // Ground telegraph ring (visible when alert rises)
+    const ringGeo = new THREE.RingGeometry(0.9, 1.15, 24);
+    this.alertRing = new THREE.Mesh(ringGeo, mats.dangerRing.clone());
+    this.alertRing.rotation.x = -Math.PI / 2;
+    this.alertRing.position.y = 0.08;
+    this.alertRing.visible = false;
+    (this.alertRing.material as THREE.MeshStandardMaterial).opacity = 0.35;
+    this.group.add(this.alertRing);
+
     this.group.position.copy(this.position);
   }
 
@@ -34,10 +52,13 @@ export class Jaguar {
     body.castShadow = true;
     g.add(body);
 
-    // Spots
-    for (let i = 0; i < 8; i++) {
-      const spot = new THREE.Mesh(new THREE.SphereGeometry(0.07, 6, 4), mats.jaguarSpot);
-      spot.position.set((Math.random() - 0.5) * 0.5, 0.65 + Math.random() * 0.15, (Math.random() - 0.5) * 0.9);
+    for (let i = 0; i < 10; i++) {
+      const spot = new THREE.Mesh(new THREE.SphereGeometry(0.06, 6, 4), mats.jaguarSpot);
+      spot.position.set(
+        (Math.random() - 0.5) * 0.5,
+        0.62 + Math.random() * 0.18,
+        (Math.random() - 0.5) * 0.95,
+      );
       g.add(spot);
     }
 
@@ -62,7 +83,14 @@ export class Jaguar {
     earR.position.x = 0.12;
     g.add(earR);
 
-    // Legs
+    // Glowing eyes for telegraph
+    for (const ox of [-0.08, 0.08]) {
+      const eye = new THREE.Mesh(new THREE.SphereGeometry(0.045, 6, 6), mats.jaguarEye.clone());
+      eye.position.set(ox, 0.68, 0.72);
+      g.add(eye);
+      this.eyes.push(eye);
+    }
+
     const legGeo = new THREE.CylinderGeometry(0.06, 0.05, 0.4, 5);
     const offsets: [number, number][] = [
       [-0.18, 0.28],
@@ -83,6 +111,33 @@ export class Jaguar {
 
     g.scale.setScalar(1.15);
     return g;
+  }
+
+  private setEyeMat(mat: THREE.Material) {
+    for (const e of this.eyes) e.material = mat;
+  }
+
+  private spawnScareBurst() {
+    const count = 18;
+    const positions = new Float32Array(count * 3);
+    for (let i = 0; i < count; i++) {
+      positions[i * 3] = (Math.random() - 0.5) * 0.4;
+      positions[i * 3 + 1] = 0.4 + Math.random() * 0.6;
+      positions[i * 3 + 2] = (Math.random() - 0.5) * 0.4;
+    }
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+    const mat = new THREE.PointsMaterial({
+      color: 0xffcc66,
+      size: 0.18,
+      transparent: true,
+      opacity: 0.9,
+      depthWrite: false,
+    });
+    if (this.scareBurst) this.group.remove(this.scareBurst);
+    this.scareBurst = new THREE.Points(geo, mat);
+    this.group.add(this.scareBurst);
+    this.scareBurstT = 0.55;
   }
 
   calm(awayFrom?: THREE.Vector3, dist = 14) {
@@ -107,14 +162,19 @@ export class Jaguar {
     const dist = toPlayer.length();
     const scareR = player.scareRadius();
 
-    // Scare check
     if (scareR > 0 && dist < scareR && player.isScaring()) {
+      if (this.state !== 'flee') {
+        this.spawnScareBurst();
+        this.onTip?.(
+          player.torchWaveT > 0
+            ? 'Torch flare! The jaguar yelps and bolts into the brush.'
+            : 'Noisemaker chaos! Spotted menace: exiting stage left.',
+        );
+        this.onStateChange?.('flee');
+      }
       this.state = 'flee';
       this.fleeTimer = 3.5;
-      if (!this.tipShown) {
-        this.tipShown = true;
-        this.onTip?.('The jaguar bolts! Torch waves and noise really work.');
-      }
+      this.tipShown = true;
     }
 
     if (this.state === 'flee') {
@@ -122,12 +182,15 @@ export class Jaguar {
       const away = this.position.clone().sub(player.position).normalize();
       this.position.addScaledVector(away, 11 * dt);
       this.yaw = Math.atan2(away.x, away.z);
+      this.bodyRoot.scale.setScalar(1.15);
+      this.setEyeMat(mats.jaguarEye);
+      this.alertRing.visible = false;
       if (this.fleeTimer <= 0 || this.position.distanceTo(this.patrolCenter) > 40) {
         this.state = 'gone';
         this.onTip?.('One less spotted problem. Keep moving toward the temple.');
+        this.onStateChange?.('gone');
       }
     } else if (this.state === 'patrol' || this.state === 'stalk' || this.state === 'chase') {
-      // Detection
       const detectRange = player.hiding ? 4.5 : player.sprinting ? 18 : 12;
       if (dist < detectRange) {
         this.alert = Math.min(1, this.alert + dt * (player.hiding ? 0.15 : 0.5));
@@ -135,12 +198,28 @@ export class Jaguar {
         this.alert = Math.max(0, this.alert - dt * 0.25);
       }
 
-      if (this.alert > 0.7) {
-        this.state = 'chase';
-      } else if (this.alert > 0.25) {
-        this.state = 'stalk';
-      } else {
-        this.state = 'patrol';
+      let next: JaguarState = 'patrol';
+      if (this.alert > 0.7) next = 'chase';
+      else if (this.alert > 0.25) next = 'stalk';
+
+      if (next !== this.state) {
+        if (next === 'stalk' && this.state === 'patrol') {
+          this.onStateChange?.('stalk');
+          if (!this.tipShown && dist < 16) {
+            this.tipShown = true;
+            this.onTip?.(
+              'Jaguar stalking… eyes glowing. Wave torch / noisemaker, or hold Hide!',
+            );
+          }
+        }
+        if (next === 'chase') {
+          this.onStateChange?.('chase');
+          if (!this.chaseTipShown) {
+            this.chaseTipShown = true;
+            this.onTip?.('CHASE! Scare it NOW (torch or noise) or sprint for cover!');
+          }
+        }
+        this.state = next;
       }
 
       if (this.state === 'patrol') {
@@ -153,26 +232,61 @@ export class Jaguar {
           this.position.addScaledVector(dir, 2.2 * dt);
           this.yaw = Math.atan2(dir.x, dir.z);
         }
+        this.setEyeMat(mats.jaguarEye);
+        this.alertRing.visible = false;
+        this.bodyRoot.scale.set(1.15, 1.15, 1.15);
       } else if (this.state === 'stalk') {
         const dir = toPlayer.clone().normalize();
         this.position.addScaledVector(dir, 2.8 * dt);
         this.yaw = Math.atan2(dir.x, dir.z);
-        if (!this.tipShown && dist < 14) {
-          this.tipShown = true;
-          this.onTip?.('Jaguar nearby! Wave torch (click / F) or noisemaker (2 then click). Or hold Ctrl to hide.');
-        }
+        this.setEyeMat(mats.jaguarEyeAlert);
+        this.alertRing.visible = true;
+        (this.alertRing.material as THREE.MeshStandardMaterial).color.setHex(0xffaa22);
+        (this.alertRing.material as THREE.MeshStandardMaterial).emissive.setHex(0xff8800);
+        const pulse = 0.3 + Math.sin(performance.now() * 0.008) * 0.12;
+        (this.alertRing.material as THREE.MeshStandardMaterial).opacity = pulse;
+        // Crouch telegraph
+        this.bodyRoot.scale.set(1.15, 0.95, 1.2);
       } else if (this.state === 'chase') {
         const dir = toPlayer.clone().normalize();
         this.position.addScaledVector(dir, 6.5 * dt);
         this.yaw = Math.atan2(dir.x, dir.z);
+        this.setEyeMat(mats.jaguarEyeChase);
+        this.alertRing.visible = true;
+        (this.alertRing.material as THREE.MeshStandardMaterial).color.setHex(0xff3322);
+        (this.alertRing.material as THREE.MeshStandardMaterial).emissive.setHex(0xff1100);
+        (this.alertRing.material as THREE.MeshStandardMaterial).opacity =
+          0.45 + Math.sin(performance.now() * 0.02) * 0.2;
+        this.bodyRoot.scale.set(1.2, 1.15, 1.25);
         if (dist < 1.4 && !player.isScaring()) {
           this.onCatch?.();
         }
       }
     }
 
+    // Scare particles
+    if (this.scareBurst && this.scareBurstT > 0) {
+      this.scareBurstT -= dt;
+      const pos = this.scareBurst.geometry.getAttribute('position') as THREE.BufferAttribute;
+      for (let i = 0; i < pos.count; i++) {
+        pos.setY(i, pos.getY(i) + dt * 2.5);
+        pos.setX(i, pos.getX(i) + (Math.random() - 0.5) * dt * 2);
+        pos.setZ(i, pos.getZ(i) + (Math.random() - 0.5) * dt * 2);
+      }
+      pos.needsUpdate = true;
+      (this.scareBurst.material as THREE.PointsMaterial).opacity = Math.max(0, this.scareBurstT / 0.55);
+      if (this.scareBurstT <= 0) {
+        this.group.remove(this.scareBurst);
+        this.scareBurst = null;
+      }
+    }
+
     this.group.position.copy(this.position);
-    this.group.position.y = Math.sin(performance.now() * 0.01) * 0.03;
+    const bob =
+      this.state === 'chase'
+        ? Math.sin(performance.now() * 0.02) * 0.05
+        : Math.sin(performance.now() * 0.01) * 0.03;
+    this.group.position.y = bob;
     this.group.rotation.y = this.yaw;
   }
 }

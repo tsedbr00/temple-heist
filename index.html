@@ -2,7 +2,9 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
     <title>Temple Heist</title>
     <link rel="stylesheet" href="/src/style.css" />
   </head>
@@ -21,19 +23,22 @@
             you'll need all three.
           </p>
           <ul class="tips">
-            <li>🔦 Scare cats with torch waves &amp; loud toys</li>
+            <li>🔦 Scare cats with torch waves &amp; loud toys — no combat</li>
             <li>🗺️ Explore to fill the fog-of-war map</li>
-            <li>💀 Traps hurt. Checkpoints forgive. Mostly.</li>
+            <li>⚠ Red marks danger; gold pads solve puzzles</li>
+            <li>📱 Touch controls auto-enable on phones</li>
           </ul>
           <button id="play-btn" class="btn primary">Play</button>
-          <p class="controls-hint">WASD · Mouse look · Shift sprint · E interact · 1 Torch · 2 Noise</p>
+          <p class="controls-hint desktop-only">WASD · Mouse look · Shift sprint · Ctrl hide · 1 Torch · 2 Noise · F/Click use</p>
+          <p class="controls-hint touch-only">Left stick move · Right pad look · Buttons for tools</p>
         </div>
       </div>
 
       <!-- HUD -->
       <div id="hud" class="hidden">
         <canvas id="minimap" width="180" height="180"></canvas>
-        <div id="hotbar">
+        <div id="jaguar-alert" class="jaguar-alert hidden"></div>
+        <div id="hotbar" class="desktop-hotbar">
           <div class="slot selected" data-tool="torch" id="slot-torch">
             <span class="key">1</span>
             <span class="icon">🔦</span>
@@ -48,11 +53,31 @@
         <div id="tip" class="tip hidden"></div>
         <div id="interact-prompt" class="prompt hidden">Press <kbd>E</kbd> to interact</div>
         <div id="status"></div>
+
+        <!-- Mobile / touch controls -->
+        <div id="mobile-controls" class="hidden">
+          <div id="joy-zone" class="joy-zone">
+            <div id="joy-knob" class="joy-knob"></div>
+            <span class="ctrl-label">Move</span>
+          </div>
+          <div id="look-pad" class="look-pad">
+            <span class="ctrl-label">Look</span>
+          </div>
+          <div class="mobile-btns">
+            <button type="button" id="btn-sprint" class="mbtn">Sprint</button>
+            <button type="button" id="btn-hide" class="mbtn">Hide</button>
+            <button type="button" id="btn-torch" class="mbtn selected">🔦</button>
+            <button type="button" id="btn-noise" class="mbtn">🔔</button>
+            <button type="button" id="btn-use" class="mbtn primary">Use</button>
+            <button type="button" id="btn-interact" class="mbtn accent">Grab</button>
+          </div>
+        </div>
       </div>
 
       <!-- Death / Respawn -->
       <div id="death-screen" class="overlay hidden">
-        <div class="panel">
+        <div class="panel death-panel">
+          <div class="big-emoji">💀</div>
           <h2 id="death-title">Ouch.</h2>
           <p id="death-msg">That was… not ideal.</p>
           <button id="respawn-btn" class="btn primary">Respawn at Checkpoint</button>
@@ -62,11 +87,12 @@
       <!-- Win Screen -->
       <div id="win-screen" class="overlay hidden">
         <div class="panel win-panel">
-          <h1>🏆 Heist Complete!</h1>
+          <div class="big-emoji">🏆</div>
+          <h1>Heist Complete!</h1>
           <p>
             You grabbed the idol, outran the cats, and somehow still have all
             your fingers. The jungle will never forget this. Neither will your
-            résumé.
+            résumé. (Please don't put "temple theft" on LinkedIn.)
           </p>
           <button id="replay-btn" class="btn primary">Steal It Again</button>
         </div>
