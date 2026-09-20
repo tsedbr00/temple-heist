@@ -278,6 +278,7 @@ class LightBeamPuzzle extends Trap {
   private tipSent = false;
   private pos: THREE.Vector3;
   private lastPad = -1;
+  private beamGrace = 0;
 
   constructor(parent: THREE.Group, pos: THREE.Vector3, _onEvent?: (e: TrapEvent) => void) {
     super();
@@ -363,18 +364,20 @@ class LightBeamPuzzle extends Trap {
     if (!this.tipSent && Math.abs(player.position.z - this.pos.z) < 5 && player.position.z < -28) {
       this.tipSent = true;
       this.tipMessage =
-        'Puzzle: step glowing pads LEFT → RIGHT → MIDDLE (blue→green→gold order). Avoid the sweeping beam!';
+        'Puzzle: step glowing pads LEFT → RIGHT → MIDDLE (blue→green→gold order). Hug the walls or wait for the beam to pass!';
       return 'tip';
     }
 
-    this.beamAngle += dt * 1.05;
+    this.beamAngle += dt * 0.55;
+    this.beamGrace = Math.max(0, this.beamGrace - dt);
     const beam = this.beams[0];
     const bx = Math.sin(this.beamAngle) * 3.5;
     beam.position.x = bx;
 
     if (
-      Math.abs(player.position.x - bx) < 0.55 &&
-      Math.abs(player.position.z - this.pos.z) < 3.2 &&
+      this.beamGrace <= 0 &&
+      Math.abs(player.position.x - bx) < 0.35 &&
+      Math.abs(player.position.z - this.pos.z) < 2.6 &&
       player.position.z < this.pos.z + 2.5
     ) {
       return 'fatal';
@@ -391,6 +394,7 @@ class LightBeamPuzzle extends Trap {
         if (this.sequence[this.progress] === i) {
           pad.material = mats.gold;
           this.progress++;
+          this.beamGrace = 0.4;
           this.sfxId = 'pad';
           result = 'sfx';
           if (this.progress >= this.sequence.length) {
@@ -444,6 +448,7 @@ class LightBeamPuzzle extends Trap {
     this.progress = 0;
     this.solved = false;
     this.lastPad = -1;
+    this.beamGrace = 0;
     for (const p of this.pads) p.material = mats.plate;
     this.gate.position.set(0, this.pos.y + 1.7, this.pos.z - 2.8);
   }
