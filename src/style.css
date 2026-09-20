@@ -1,0 +1,246 @@
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body, #app {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: #0a1a0a;
+  font-family: "Segoe UI", system-ui, sans-serif;
+  color: #f0f4e8;
+}
+
+#game-canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  outline: none;
+}
+
+.overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: radial-gradient(ellipse at center, rgba(10, 40, 20, 0.85), rgba(0, 0, 0, 0.92));
+  z-index: 20;
+}
+
+.overlay.hidden, .hidden {
+  display: none !important;
+}
+
+.panel {
+  background: linear-gradient(160deg, rgba(28, 55, 35, 0.95), rgba(12, 28, 18, 0.98));
+  border: 2px solid #c4a35a;
+  border-radius: 16px;
+  padding: 2.2rem 2.6rem;
+  max-width: 480px;
+  text-align: center;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.55), inset 0 1px 0 rgba(255, 220, 140, 0.15);
+}
+
+.title-panel h1, .win-panel h1 {
+  font-size: 2.6rem;
+  letter-spacing: 0.04em;
+  color: #f5d78e;
+  text-shadow: 0 2px 12px rgba(200, 140, 40, 0.4);
+  margin-bottom: 0.8rem;
+}
+
+.blurb {
+  line-height: 1.55;
+  color: #d8e0c8;
+  margin-bottom: 1.2rem;
+  font-size: 1.02rem;
+}
+
+.tips {
+  list-style: none;
+  text-align: left;
+  margin: 0 auto 1.4rem;
+  max-width: 340px;
+  color: #b8c9a0;
+  font-size: 0.95rem;
+}
+
+.tips li {
+  padding: 0.35rem 0;
+}
+
+.btn {
+  appearance: none;
+  border: none;
+  cursor: pointer;
+  font-size: 1.15rem;
+  font-weight: 700;
+  padding: 0.75rem 2.2rem;
+  border-radius: 999px;
+  transition: transform 0.12s, box-shadow 0.12s;
+}
+
+.btn.primary {
+  background: linear-gradient(180deg, #e8c56a, #c4922e);
+  color: #1a1208;
+  box-shadow: 0 4px 16px rgba(196, 146, 46, 0.45);
+}
+
+.btn.primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 22px rgba(196, 146, 46, 0.6);
+}
+
+.btn.primary:active {
+  transform: translateY(0);
+}
+
+.controls-hint {
+  margin-top: 1.1rem;
+  font-size: 0.78rem;
+  color: #8a9a78;
+  letter-spacing: 0.02em;
+}
+
+#hud {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 10;
+}
+
+#minimap {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  width: 180px;
+  height: 180px;
+  border-radius: 12px;
+  border: 2px solid #c4a35a;
+  background: #0a1208;
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.5);
+}
+
+#hotbar {
+  position: absolute;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 10px;
+  pointer-events: auto;
+}
+
+.slot {
+  width: 72px;
+  height: 72px;
+  background: rgba(18, 32, 20, 0.85);
+  border: 2px solid #5a6a4a;
+  border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  position: relative;
+  cursor: pointer;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.slot.selected {
+  border-color: #e8c56a;
+  box-shadow: 0 0 14px rgba(232, 197, 106, 0.35);
+}
+
+.slot .key {
+  position: absolute;
+  top: 4px;
+  left: 6px;
+  font-size: 0.7rem;
+  color: #a0b080;
+}
+
+.slot .icon {
+  font-size: 1.5rem;
+  line-height: 1;
+}
+
+.slot .label {
+  font-size: 0.65rem;
+  color: #c8d8b0;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.slot.active-use {
+  animation: pulse 0.35s ease;
+}
+
+@keyframes pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.08); }
+}
+
+.tip {
+  position: absolute;
+  top: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(12, 24, 14, 0.88);
+  border: 1px solid #c4a35a;
+  border-radius: 10px;
+  padding: 0.7rem 1.2rem;
+  max-width: 420px;
+  text-align: center;
+  font-size: 0.95rem;
+  color: #f0e0b0;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+}
+
+.prompt {
+  position: absolute;
+  bottom: 120px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0, 0, 0, 0.7);
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  font-size: 0.95rem;
+}
+
+.prompt kbd {
+  background: #2a3a28;
+  border: 1px solid #6a7a5a;
+  border-radius: 4px;
+  padding: 0.1rem 0.4rem;
+  font-family: inherit;
+}
+
+#status {
+  position: absolute;
+  bottom: 24px;
+  left: 20px;
+  font-size: 0.85rem;
+  color: #a8b898;
+  text-shadow: 0 1px 3px #000;
+}
+
+#death-screen h2 {
+  color: #e87868;
+  font-size: 2rem;
+  margin-bottom: 0.6rem;
+}
+
+#death-screen p {
+  margin-bottom: 1.2rem;
+  color: #d0c0b0;
+}
+
+.win-panel p {
+  margin-bottom: 1.4rem;
+  line-height: 1.5;
+  color: #d8e0c8;
+}
